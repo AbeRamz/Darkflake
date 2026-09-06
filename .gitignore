@@ -1,0 +1,24 @@
+# Carpetas generadas por Unreal
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Archivos de Visual Studio
+.vs/
+*.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Archivos temporales de Unreal
+*.tmp
+*.log
+UpgradeLog.htm
+
+# No ignorar el archivo .uproject
+!*.uproject
