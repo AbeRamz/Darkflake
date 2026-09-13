@@ -144,6 +144,8 @@ void ACombatCharacter::DoComboAttackEnd()
 
 void ACombatCharacter::DoChargedAttackStart()
 {
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("DoChargedAttackStart called"));
+
 	// raise the charging attack flag
 	bIsChargingAttack = true;
 
@@ -153,6 +155,8 @@ void ACombatCharacter::DoChargedAttackStart()
 		if (!bHasLoopedChargedAttack)
 		{
 			bHasReleasedChargedAttack = false;
+			ChargeStartTime = GetWorld()->GetTimeSeconds();
+			bIsWeakChargedAttack = false;
 		}
 
 		// cache the input time so we can check it later
@@ -166,6 +170,8 @@ void ACombatCharacter::DoChargedAttackStart()
 
 void ACombatCharacter::DoChargedAttackEnd()
 {
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("DoChargedAttackEnd called"));
+
 	// lower the charging attack flag
 	bIsChargingAttack = false;
 
@@ -244,6 +250,9 @@ void ACombatCharacter::ChargedAttack()
 
 void ACombatCharacter::AttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan,
+		FString::Printf(TEXT("AttackMontageEnded: interrupted=%d"), bInterrupted));
+
 	// reset the attacking flag
 	bIsAttacking = false;
 
@@ -353,10 +362,19 @@ void ACombatCharacter::CheckChargedAttack()
 
 void ACombatCharacter::LoopOrResolveChargedAttack()
 {
-	// jump to either the loop or the attack section depending on whether we've released the charge
 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 	{
-		AnimInstance->Montage_JumpToSection(bHasReleasedChargedAttack ? ChargeAttackSection : ChargeLoopSection , ChargedAttackMontage);
+		if (bHasReleasedChargedAttack)
+		{
+			// Determine if the player released before the minimum charge time
+			const float ChargeDuration = GetWorld()->GetTimeSeconds() - ChargeStartTime;
+			bIsWeakChargedAttack = ChargeDuration < MinChargeTime;
+
+			// Speed up the swing if it wasn't fully charged
+			AnimInstance->Montage_SetPlayRate(ChargedAttackMontage, bIsWeakChargedAttack ? WeakAttackPlayRateMultiplier : 1.0f);
+		}
+
+		AnimInstance->Montage_JumpToSection(bHasReleasedChargedAttack ? ChargeAttackSection : ChargeLoopSection, ChargedAttackMontage);
 	}
 }
 

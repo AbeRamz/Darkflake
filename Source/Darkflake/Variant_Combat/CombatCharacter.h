@@ -146,6 +146,8 @@ protected:
 	/** Index of the current stage of the melee attack combo */
 	int32 ComboCount = 0;
 
+	/** AttackCharged*/
+
 	/** AnimMontage that will play for charged attacks */
 	UPROPERTY(EditAnywhere, Category="Melee Attack|Charged")
 	UAnimMontage* ChargedAttackMontage;
@@ -157,6 +159,20 @@ protected:
 	/** Name of the AnimMontage section that corresponds to the attack */
 	UPROPERTY(EditAnywhere, Category="Melee Attack|Charged")
 	FName ChargeAttackSection;
+
+	/** Minimum time (seconds) the button must be held for a fully charged attack */
+	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged", meta = (ClampMin = 0, ClampMax = 5, Units = "s"))
+	float MinChargeTime = 1.0f;
+
+	/** Play rate multiplier applied when released before fully charged (attack plays faster) */
+	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged", meta = (ClampMin = 1.0, ClampMax = 5.0))
+	float WeakAttackPlayRateMultiplier = 2.0f;
+
+	/** Time at which the current charge began */
+	float ChargeStartTime = 0.0f;
+
+	/** True if the current/last charged attack was released before fully charging (for damage scaling later) */
+	bool bIsWeakChargedAttack = false;
 
 	/** Flag that determines if the player is currently holding the charged attack input */
 	bool bIsChargingAttack = false;
