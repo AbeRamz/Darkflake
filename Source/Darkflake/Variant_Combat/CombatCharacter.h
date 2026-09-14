@@ -73,6 +73,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* ToggleCameraAction;
 
+	/** Dodge Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* DodgeAction;
+
 	/** Max amount of HP the character will have on respawn */
 	UPROPERTY(EditAnywhere, Category="Damage", meta = (ClampMin = 0, ClampMax = 100))
 	float MaxHP = 5.0f;
@@ -168,6 +172,30 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged", meta = (ClampMin = 1.0, ClampMax = 5.0))
 	float WeakAttackPlayRateMultiplier = 2.0f;
 
+	/** Dodge */
+	/** AnimMontage played for the dodge/roll */
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	UAnimMontage* DodgeMontage;
+
+	/** True while the character is currently dodging */
+	UPROPERTY(BlueprintReadOnly, Category = "Dodge")
+	bool bIsDodging = false;
+
+	/** True while the character is invincible (e.g. during dodge i-frames) */
+	UPROPERTY(BlueprintReadOnly, Category = "Dodge")
+	bool bIsInvincible = false;
+
+	/** Distance the character travels during the dodge roll */
+	UPROPERTY(EditAnywhere, Category = "Dodge", meta = (ClampMin = 0, ClampMax = 2000, Units = "cm"))
+	float DodgeDistance = 400.0f;
+
+	/** How long the dodge roll takes to complete, matching the animation length */
+	UPROPERTY(EditAnywhere, Category = "Dodge", meta = (ClampMin = 0.1, ClampMax = 3, Units = "s"))
+	float DodgeDuration = 0.6f;
+
+	/** Cached world-space direction of the last movement input, used to orient the dodge */
+	FVector LastMovementInputVector = FVector::ZeroVector;
+
 	/** Time at which the current charge began */
 	float ChargeStartTime = 0.0f;
 
@@ -233,6 +261,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
 	void BP_ToggleCamera();
 
+	void DodgePressed();
+	void DodgeMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 public:
 
 	/** Handles move inputs from either controls or UI interfaces */
@@ -258,6 +289,12 @@ public:
 	/** Handles charged attack released from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoChargedAttackEnd();
+
+	UFUNCTION(BlueprintCallable, Category = "Dodge")
+	virtual void DoDodge();
+
+	UFUNCTION(BlueprintCallable, Category = "Dodge")
+	void SetInvincible(bool bNewInvincible);
 
 protected:
 

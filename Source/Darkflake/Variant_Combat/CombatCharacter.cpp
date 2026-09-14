@@ -96,17 +96,15 @@ void ACombatCharacter::DoMove(float Right, float Forward)
 {
 	if (GetController() != nullptr)
 	{
-		// find out which way is forward
 		const FRotator Rotation = GetController()->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		// add movement 
+		// Cache this for the dodge to use, since it's more reliable than GetLastInputVector()
+		LastMovementInputVector = (ForwardDirection * Forward) + (RightDirection * Right);
+
 		AddMovementInput(ForwardDirection, Forward);
 		AddMovementInput(RightDirection, Right);
 	}
@@ -418,6 +416,12 @@ void ACombatCharacter::NotifyEnemiesOfIncomingAttack()
 
 void ACombatCharacter::ApplyDamage(float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse)
 {
+	// ignore damage entirely while invincible (e.g. mid-dodge i-frames)
+	if (bIsInvincible)
+	{
+		return;
+	}
+
 	// pass the damage event to the actor
 	FDamageEvent DamageEvent;
 	const float ActualDamage = TakeDamage(Damage, DamageEvent, nullptr, DamageCauser);
@@ -570,6 +574,9 @@ void ACombatCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Camera Side Toggle
 		EnhancedInputComponent->BindAction(ToggleCameraAction, ETriggerEvent::Triggered, this, &ACombatCharacter::ToggleCamera);
+
+		// Dodge
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ACombatCharacter::DodgePressed);
 	}
 }
 
@@ -582,5 +589,61 @@ void ACombatCharacter::NotifyControllerChanged()
 	{
 		PC->SetRespawnTransform(GetActorTransform());
 	}
+}
+
+void ACombatCharacter::DodgePressed()
+{
+	DoDodge();
+}
+
+void ACombatCharacter::DoDodge()
+{
+	if (bIsDodging || bIsAttacking)
+	{
+		return;
+	}
+
+	bIsDodging = true;
+
+	bUseControllerRotationYaw = false;
+
+	FVector RollDirection = GetActorForwardVector();
+	if (!LastMovementInputVector.IsNearlyZero())
+	{
+		const FRotator FacingRotation(0.0f, LastMovementInputVector.Rotation().Yaw, 0.0f);
+		SetActorRotation(FacingRotation);
+		RollDirection = LastMovementInputVector.GetSafeNormal();
+	}
+
+	const FVector LaunchVelocity = RollDirection * (DodgeDistance / DodgeDuration);
+	LaunchCharacter(FVector(LaunchVelocity.X, LaunchVelocity.Y, 0.0f), true, true);
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		const float MontageLength = AnimInstance->Montage_Play(DodgeMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
+
+		if (MontageLength > 0.0f)
+		{
+			FOnMontageEnded DodgeEndDelegate;
+			DodgeEndDelegate.BindUObject(this, &ACombatCharacter::DodgeMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(DodgeEndDelegate, DodgeMontage);
+		}
+	}
+}
+
+void ACombatCharacter::DodgeMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsDodging = false;
+	bIsInvincible = false;
+
+	// Give rotation control back to the camera now that the dodge is done
+	bUseControllerRotationYaw = true;
+
+	GetMesh()->SetRelativeRotation(MeshStartingTransform.Rotator());
+}
+
+void ACombatCharacter::SetInvincible(bool bNewInvincible)
+{
+	bIsInvincible = bNewInvincible;
 }
 
