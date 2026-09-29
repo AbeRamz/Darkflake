@@ -364,12 +364,15 @@ void ACombatCharacter::LoopOrResolveChargedAttack()
 	{
 		if (bHasReleasedChargedAttack)
 		{
-			// Determine if the player released before the minimum charge time
 			const float ChargeDuration = GetWorld()->GetTimeSeconds() - ChargeStartTime;
 			bIsWeakChargedAttack = ChargeDuration < MinChargeTime;
 
-			// Speed up the swing if it wasn't fully charged
 			AnimInstance->Montage_SetPlayRate(ChargedAttackMontage, bIsWeakChargedAttack ? WeakAttackPlayRateMultiplier : 1.0f);
+
+			// keep pushing forward for the whole swing duration instead of one instant burst
+			LungeVelocity = GetActorForwardVector() * (ChargedAttackLungeDistance / ChargedAttackLungeDuration);
+			LungeTimeRemaining = ChargedAttackLungeDuration;
+			bIsLunging = true;
 		}
 
 		AnimInstance->Montage_JumpToSection(bHasReleasedChargedAttack ? ChargeAttackSection : ChargeLoopSection, ChargedAttackMontage);
@@ -647,3 +650,24 @@ void ACombatCharacter::SetInvincible(bool bNewInvincible)
 	bIsInvincible = bNewInvincible;
 }
 
+void ACombatCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsLunging)
+	{
+		LungeTimeRemaining -= DeltaTime;
+
+		if (LungeTimeRemaining > 0.0f)
+		{
+			// keep pushing forward at a constant pace for the whole swing,
+			// instead of a single burst that decays from ground friction
+			FVector CurrentVelocity = GetCharacterMovement()->Velocity;
+			GetCharacterMovement()->Velocity = FVector(LungeVelocity.X, LungeVelocity.Y, CurrentVelocity.Z);
+		}
+		else
+		{
+			bIsLunging = false;
+		}
+	}
+}

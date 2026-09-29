@@ -172,6 +172,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged", meta = (ClampMin = 1.0, ClampMax = 5.0))
 	float WeakAttackPlayRateMultiplier = 2.0f;
 
+	/** Distance the character lunges forward when committing to the charged attack swing */
+	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged")
+	float ChargedAttackLungeDistance = 300.0f;
+
+	/** Duration (in seconds) over which the lunge distance is covered */
+	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged")
+	float ChargedAttackLungeDuration = 0.3f;
+
+	bool bIsLunging = false;
+
+	/** Time remaining (seconds) on the current lunge */
+	float LungeTimeRemaining = 0.0f;
+
+	/** Cached forward velocity being applied while lunging */
+	FVector LungeVelocity = FVector::ZeroVector;
+
 	/** Dodge */
 	/** AnimMontage played for the dodge/roll */
 	UPROPERTY(EditAnywhere, Category = "Dodge")
@@ -358,6 +374,9 @@ public:
 
 	/** Overrides landing to reset damage ragdoll physics */
 	virtual void Landed(const FHitResult& Hit) override;
+
+	/** Overrides tick to sustain the charged attack lunge velocity */
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 
