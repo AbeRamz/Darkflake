@@ -312,6 +312,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dodge")
 	void SetInvincible(bool bNewInvincible);
 
+	UFUNCTION(BlueprintCallable, Category = "Melee Attack|Damage")
+	void SetMeleeDamage(float NewDamage) { MeleeDamage = NewDamage; }
+
 protected:
 
 	/** Resets the character's current HP to maximum */
