@@ -315,6 +315,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Melee Attack|Damage")
 	void SetMeleeDamage(float NewDamage) { MeleeDamage = NewDamage; }
 
+	UFUNCTION(BlueprintCallable, Category = "Melee Attack")
+	void SetComboAttackMontage(UAnimMontage* NewMontage);
+
 protected:
 
 	/** Resets the character's current HP to maximum */

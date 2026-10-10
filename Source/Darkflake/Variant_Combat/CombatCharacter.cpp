@@ -671,3 +671,12 @@ void ACombatCharacter::Tick(float DeltaTime)
 		}
 	}
 }
+
+//New Montage
+void ACombatCharacter::SetComboAttackMontage(UAnimMontage* NewMontage)
+{
+	if (NewMontage)
+	{
+		ComboAttackMontage = NewMontage;
+	}
+}
