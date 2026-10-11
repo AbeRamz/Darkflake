@@ -85,6 +85,31 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Damage")
 	float CurrentHP = 0.0f;
 
+	/** Stamina */
+	UPROPERTY(EditAnywhere, Category = "Stamina", meta = (ClampMin = 1))
+	float MaxStamina = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+	float CurrentStamina = 0.0f;
+
+	/** Stamina que cuesta cada golpe (cada golpe del combo y el ataque cargado) */
+	UPROPERTY(EditAnywhere, Category = "Stamina")
+	float AttackStaminaCost = 15.0f;
+
+	/** Stamina que cuesta rodar */
+	UPROPERTY(EditAnywhere, Category = "Stamina")
+	float DodgeStaminaCost = 25.0f;
+
+	/** Stamina que se recupera por segundo */
+	UPROPERTY(EditAnywhere, Category = "Stamina")
+	float StaminaRegenRate = 20.0f;
+
+	/** Segundos sin gastar estamina antes de empezar a recuperar */
+	UPROPERTY(EditAnywhere, Category = "Stamina")
+	float StaminaRegenDelay = 1.0f;
+
+	float LastStaminaUseTime = -100.0f;
+
 	/** Life bar widget fill color */
 	UPROPERTY(EditAnywhere, Category="Damage")
 	FLinearColor LifeBarColor;
@@ -323,6 +348,12 @@ protected:
 	/** Resets the character's current HP to maximum */
 	void ResetHP();
 
+	/** Gasta estamina si alcanza; devuelve false si no */
+	bool TryConsumeStamina(float Cost);
+
+	/** Cambia la estamina y avisa al HUD */
+	void SetStamina(float NewValue);
+
 	/** Performs a combo attack */
 	void ComboAttack();
 
@@ -393,6 +424,14 @@ protected:
 	/** Blueprint handler to play damage received effects */
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
 	void ReceivedDamage(float Damage, const FVector& ImpactPoint, const FVector& DamageDirection);
+
+	/** Avisa al HUD que cambió la vida (0 a 1) */
+	UFUNCTION(BlueprintImplementableEvent, Category = "HUD")
+	void OnHealthChanged(float Percent);
+
+	/** Avisa al HUD que cambió la estamina (0 a 1) */
+	UFUNCTION(BlueprintImplementableEvent, Category = "HUD")
+	void OnStaminaChanged(float Percent);
 
 protected:
 

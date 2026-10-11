@@ -142,8 +142,6 @@ void ACombatCharacter::DoComboAttackEnd()
 
 void ACombatCharacter::DoChargedAttackStart()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("DoChargedAttackStart called"));
-
 	// raise the charging attack flag
 	bIsChargingAttack = true;
 
@@ -168,8 +166,6 @@ void ACombatCharacter::DoChargedAttackStart()
 
 void ACombatCharacter::DoChargedAttackEnd()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("DoChargedAttackEnd called"));
-
 	// lower the charging attack flag
 	bIsChargingAttack = false;
 
@@ -190,10 +186,34 @@ void ACombatCharacter::ResetHP()
 
 	// update the life bar
 	LifeBarWidget->SetLifePercentage(1.0f);
+	OnHealthChanged(1.0f);
+}
+
+void ACombatCharacter::SetStamina(float NewValue)
+{
+	CurrentStamina = FMath::Clamp(NewValue, 0.0f, MaxStamina);
+	OnStaminaChanged(CurrentStamina / MaxStamina);
+}
+
+bool ACombatCharacter::TryConsumeStamina(float Cost)
+{
+	if (CurrentStamina < Cost)
+	{
+		return false;
+	}
+
+	SetStamina(CurrentStamina - Cost);
+	LastStaminaUseTime = GetWorld()->GetTimeSeconds();
+	return true;
 }
 
 void ACombatCharacter::ComboAttack()
 {
+	if (!TryConsumeStamina(AttackStaminaCost))
+	{
+		return;
+	}
+
 	// raise the attacking flag
 	bIsAttacking = true;
 
@@ -220,6 +240,11 @@ void ACombatCharacter::ComboAttack()
 
 void ACombatCharacter::ChargedAttack()
 {
+	if (!TryConsumeStamina(AttackStaminaCost))
+	{
+		return;
+	}
+
 	// raise the attacking flag
 	bIsAttacking = true;
 
@@ -248,9 +273,6 @@ void ACombatCharacter::ChargedAttack()
 
 void ACombatCharacter::AttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan,
-		FString::Printf(TEXT("AttackMontageEnded: interrupted=%d"), bInterrupted));
-
 	// reset the attacking flag
 	bIsAttacking = false;
 
@@ -333,6 +355,12 @@ void ACombatCharacter::CheckCombo()
 			// do we still have a combo section to play?
 			if (ComboCount < ComboSectionNames.Num())
 			{
+				if (!TryConsumeStamina(AttackStaminaCost))
+				{
+					--ComboCount;
+					return;
+				}
+
 				// notify enemies they are about to be attacked
 				NotifyEnemiesOfIncomingAttack();
 
@@ -509,6 +537,9 @@ float ACombatCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dama
 		GetMesh()->SetBodySimulatePhysics(PelvisBoneName, false);
 	}
 
+	// tell the HUD
+	OnHealthChanged(FMath::Clamp(CurrentHP / MaxHP, 0.0f, 1.0f));
+
 	// return the received damage amount
 	return Damage;
 }
@@ -544,6 +575,9 @@ void ACombatCharacter::BeginPlay()
 
 	// reset HP to maximum
 	ResetHP();
+
+	// start with full stamina
+	SetStamina(MaxStamina);
 }
 
 void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -606,6 +640,11 @@ void ACombatCharacter::DoDodge()
 		return;
 	}
 
+	if (!TryConsumeStamina(DodgeStaminaCost))
+	{
+		return;
+	}
+
 	bIsDodging = true;
 
 	bUseControllerRotationYaw = false;
@@ -653,6 +692,13 @@ void ACombatCharacter::SetInvincible(bool bNewInvincible)
 void ACombatCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// regenerate stamina after a short pause without spending it
+	if (CurrentStamina < MaxStamina && !bIsDodging && !bIsAttacking
+		&& GetWorld()->GetTimeSeconds() - LastStaminaUseTime >= StaminaRegenDelay)
+	{
+		SetStamina(CurrentStamina + StaminaRegenRate * DeltaTime);
+	}
 
 	if (bIsLunging)
 	{
