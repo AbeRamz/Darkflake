@@ -535,6 +535,9 @@ float ACombatCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dama
 		// enable partial ragdoll physics, but keep the pelvis vertical
 		GetMesh()->SetPhysicsBlendWeight(0.5f);
 		GetMesh()->SetBodySimulatePhysics(PelvisBoneName, false);
+
+		// recuperar el cuerpo aunque no llegue a haber un Landed
+		GetWorld()->GetTimerManager().SetTimer(HitRecoveryTimer, this, &ACombatCharacter::RecoverFromHit, HitRecoveryTime, false);
 	}
 
 	// tell the HUD
@@ -724,5 +727,13 @@ void ACombatCharacter::SetComboAttackMontage(UAnimMontage* NewMontage)
 	if (NewMontage)
 	{
 		ComboAttackMontage = NewMontage;
+	}
+}
+
+void ACombatCharacter::RecoverFromHit()
+{
+	if (CurrentHP > 0.0f)
+	{
+		GetMesh()->SetPhysicsBlendWeight(0.0f);
 	}
 }

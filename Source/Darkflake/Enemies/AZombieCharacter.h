@@ -13,5 +13,17 @@ UCLASS()
 class DARKFLAKE_API AAZombieCharacter : public ACombatCharacter
 {
 	GENERATED_BODY()
+
+public:
+	/** Muerte del zombi: sin ragdoll, avisa al Blueprint para reproducir la animación */
+	virtual void HandleDeath() override;
+
+protected:
+	/** Se llama en Blueprint cuando el zombi muere */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Zombie")
+	void OnZombieDeath();
+
+private:
+	bool bIsDead = false;
 	
 };

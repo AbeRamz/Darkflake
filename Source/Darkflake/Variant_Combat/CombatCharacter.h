@@ -270,6 +270,14 @@ protected:
 	/** Character respawn timer */
 	FTimerHandle RespawnTimer;
 
+	UPROPERTY(EditAnywhere, Category = "Damage", meta = (ClampMin = 0, ClampMax = 2, Units = "s"))
+	float HitRecoveryTime = 0.4f;
+
+	FTimerHandle HitRecoveryTimer;
+
+	/** Quita el ragdoll parcial tras un golpe */
+	void RecoverFromHit();
+
 	/** Copy of the mesh's transform so we can reset it after ragdoll animations */
 	FTransform MeshStartingTransform;
 
