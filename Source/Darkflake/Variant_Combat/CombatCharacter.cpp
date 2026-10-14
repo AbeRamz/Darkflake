@@ -730,6 +730,14 @@ void ACombatCharacter::SetComboAttackMontage(UAnimMontage* NewMontage)
 	}
 }
 
+void ACombatCharacter::SetChargedAttackMontage(UAnimMontage* NewMontage)
+{
+	if (NewMontage)
+	{
+		ChargedAttackMontage = NewMontage;
+	}
+}
+
 void ACombatCharacter::RecoverFromHit()
 {
 	if (CurrentHP > 0.0f)
@@ -737,3 +745,4 @@ void ACombatCharacter::RecoverFromHit()
 		GetMesh()->SetPhysicsBlendWeight(0.0f);
 	}
 }
+

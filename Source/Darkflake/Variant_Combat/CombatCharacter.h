@@ -205,6 +205,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Melee Attack|Charged")
 	float ChargedAttackLungeDuration = 0.3f;
 
+	UFUNCTION(BlueprintCallable, Category = "Melee Attack")
+	void SetChargedAttackMontage(UAnimMontage* NewMontage);
+
 	bool bIsLunging = false;
 
 	/** Time remaining (seconds) on the current lunge */
