@@ -273,10 +273,6 @@ void ACombatCharacter::ChargedAttack()
 
 void ACombatCharacter::AttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Magenta,
-		FString::Printf(TEXT("Montaje terminado: %s | interrumpido=%d"),
-			Montage ? *Montage->GetName() : TEXT("NULO"), bInterrupted));
-
 	// reset the attacking flag
 	bIsAttacking = false;
 
@@ -344,51 +340,36 @@ void ACombatCharacter::DoAttackTrace(FName DamageSourceBone)
 
 void ACombatCharacter::CheckCombo()
 {
+	// are we playing a non-charge attack animation?
 	if (bIsAttacking && !bIsChargingAttack)
 	{
-		const float Elapsed = GetWorld()->GetTimeSeconds() - CachedAttackInputTime;
-
-		if (Elapsed <= ComboInputCacheTimeTolerance)
+		// is the last attack input not stale?
+		if (GetWorld()->GetTimeSeconds() - CachedAttackInputTime <= ComboInputCacheTimeTolerance)
 		{
+			// consume the attack input so we don't accidentally trigger it twice
 			CachedAttackInputTime = 0.0f;
+
+			// increase the combo counter
 			++ComboCount;
 
+			// do we still have a combo section to play?
 			if (ComboCount < ComboSectionNames.Num())
 			{
 				if (!TryConsumeStamina(AttackStaminaCost))
 				{
 					--ComboCount;
-					GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("Combo: SIN ESTAMINA"));
 					return;
 				}
 
+				// notify enemies they are about to be attacked
 				NotifyEnemiesOfIncomingAttack();
 
+				// jump to the next combo section
 				if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 				{
-					const FName Section = ComboSectionNames[ComboCount];
-					const int32 Idx = ComboAttackMontage ? ComboAttackMontage->GetSectionIndex(Section) : INDEX_NONE;
-
-					GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan,
-						FString::Printf(TEXT("Combo: salto a '%s' | montaje=%s | indice seccion=%d"),
-							*Section.ToString(),
-							ComboAttackMontage ? *ComboAttackMontage->GetName() : TEXT("NULO"),
-							Idx));
-
-					AnimInstance->Montage_JumpToSection(Section, ComboAttackMontage);
-
-					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green,
-						FString::Printf(TEXT("Tras salto: seccion=%s | pos=%.2f | sonando=%d"),
-							*AnimInstance->Montage_GetCurrentSection(ComboAttackMontage).ToString(),
-							AnimInstance->Montage_GetPosition(ComboAttackMontage),
-							AnimInstance->Montage_IsPlaying(ComboAttackMontage)));
+					AnimInstance->Montage_JumpToSection(ComboSectionNames[ComboCount], ComboAttackMontage);
 				}
 			}
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange,
-				FString::Printf(TEXT("Combo: clic viejo (%.2f s)"), Elapsed));
 		}
 	}
 }
