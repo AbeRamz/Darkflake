@@ -581,6 +581,8 @@ void ACombatCharacter::BeginPlay()
 
 	// start with full stamina
 	SetStamina(MaxStamina);
+
+	WalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 }
 
 void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -614,6 +616,10 @@ void ACombatCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Camera Side Toggle
 		EnhancedInputComponent->BindAction(ToggleCameraAction, ETriggerEvent::Triggered, this, &ACombatCharacter::ToggleCamera);
+
+		// Sprint
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACombatCharacter::SprintStarted);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACombatCharacter::SprintCompleted);
 
 		// Dodge
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ACombatCharacter::DodgePressed);
@@ -649,6 +655,7 @@ void ACombatCharacter::DoDodge()
 	}
 
 	bIsDodging = true;
+	SprintCompleted();
 
 	bUseControllerRotationYaw = false;
 
@@ -697,26 +704,24 @@ void ACombatCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// regenerate stamina after a short pause without spending it
-	if (CurrentStamina < MaxStamina && !bIsDodging && !bIsAttacking
+	if (CurrentStamina < MaxStamina && !bIsDodging && !bIsAttacking && !bIsSprinting
 		&& GetWorld()->GetTimeSeconds() - LastStaminaUseTime >= StaminaRegenDelay)
 	{
 		SetStamina(CurrentStamina + StaminaRegenRate * DeltaTime);
 	}
 
-	if (bIsLunging)
+	// gastar estamina mientras corre (solo si realmente se está moviendo)
+	if (bIsSprinting)
 	{
-		LungeTimeRemaining -= DeltaTime;
-
-		if (LungeTimeRemaining > 0.0f)
+		if (GetVelocity().Size2D() > 10.0f)
 		{
-			// keep pushing forward at a constant pace for the whole swing,
-			// instead of a single burst that decays from ground friction
-			FVector CurrentVelocity = GetCharacterMovement()->Velocity;
-			GetCharacterMovement()->Velocity = FVector(LungeVelocity.X, LungeVelocity.Y, CurrentVelocity.Z);
+			SetStamina(CurrentStamina - SprintStaminaCostPerSecond * DeltaTime);
+			LastStaminaUseTime = GetWorld()->GetTimeSeconds();
 		}
-		else
+
+		if (CurrentStamina <= 0.0f)
 		{
-			bIsLunging = false;
+			SprintCompleted();
 		}
 	}
 }
@@ -746,3 +751,24 @@ void ACombatCharacter::RecoverFromHit()
 	}
 }
 
+void ACombatCharacter::SprintStarted()
+{
+	if (bIsDodging || CurrentStamina <= 0.0f)
+	{
+		return;
+	}
+
+	bIsSprinting = true;
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void ACombatCharacter::SprintCompleted()
+{
+	if (!bIsSprinting)
+	{
+		return;
+	}
+
+	bIsSprinting = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}

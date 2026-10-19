@@ -284,6 +284,26 @@ protected:
 	/** Copy of the mesh's transform so we can reset it after ragdoll animations */
 	FTransform MeshStartingTransform;
 
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* SprintAction;
+
+	/** Velocidad al correr */
+	UPROPERTY(EditAnywhere, Category = "Sprint")
+	float SprintSpeed = 700.0f;
+
+	/** Estamina que se gasta por segundo al correr */
+	UPROPERTY(EditAnywhere, Category = "Sprint")
+	float SprintStaminaCostPerSecond = 15.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Sprint")
+	bool bIsSprinting = false;
+
+	float WalkSpeed = 0.0f;
+
+	void SprintStarted();
+	void SprintCompleted();
+
 public:
 	
 	/** Constructor */
