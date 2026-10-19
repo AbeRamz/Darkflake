@@ -304,6 +304,26 @@ protected:
 	void SprintStarted();
 	void SprintCompleted();
 
+	/** Frío */
+	UPROPERTY(EditAnywhere, Category = "Cold")
+	bool bColdEnabled = true;
+
+	/** Vida que quita cada tick de frío */
+	UPROPERTY(EditAnywhere, Category = "Cold", meta = (ClampMin = 0))
+	float ColdDamage = 0.25f;
+
+	/** Segundos entre cada tick de frío */
+	UPROPERTY(EditAnywhere, Category = "Cold", meta = (ClampMin = 0.1, Units = "s"))
+	float ColdDamageInterval = 3.0f;
+
+	/** Si es true, el frío no hace daño (lo usará el ítem especial) */
+	UPROPERTY(BlueprintReadOnly, Category = "Cold")
+	bool bColdProtected = false;
+
+	FTimerHandle ColdTimer;
+
+	void ApplyColdTick();
+
 public:
 	
 	/** Constructor */
@@ -370,6 +390,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Melee Attack|Damage")
 	void SetMeleeDamage(float NewDamage) { MeleeDamage = NewDamage; }
+
+	UFUNCTION(BlueprintCallable, Category = "Cold")
+	void SetColdProtected(bool bProtected) { bColdProtected = bProtected; }
 
 	UFUNCTION(BlueprintCallable, Category = "Melee Attack")
 	void SetComboAttackMontage(UAnimMontage* NewMontage);

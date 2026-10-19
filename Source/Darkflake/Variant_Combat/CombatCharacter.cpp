@@ -583,6 +583,8 @@ void ACombatCharacter::BeginPlay()
 	SetStamina(MaxStamina);
 
 	WalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	GetWorldTimerManager().SetTimer(ColdTimer, this, &ACombatCharacter::ApplyColdTick, ColdDamageInterval, true);
 }
 
 void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -591,6 +593,7 @@ void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	// clear the respawn timer
 	GetWorld()->GetTimerManager().ClearTimer(RespawnTimer);
+	GetWorldTimerManager().ClearTimer(ColdTimer);
 }
 
 void ACombatCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -751,6 +754,7 @@ void ACombatCharacter::RecoverFromHit()
 	}
 }
 
+//Sprint
 void ACombatCharacter::SprintStarted()
 {
 	if (bIsDodging || CurrentStamina <= 0.0f)
@@ -771,4 +775,22 @@ void ACombatCharacter::SprintCompleted()
 
 	bIsSprinting = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+//Daño por Frío
+void ACombatCharacter::ApplyColdTick()
+{
+	if (!bColdEnabled || bColdProtected || CurrentHP <= 0.0f)
+	{
+		return;
+	}
+
+	CurrentHP -= ColdDamage;
+
+	if (CurrentHP <= 0.0f)
+	{
+		HandleDeath();
+	}
+
+	OnHealthChanged(FMath::Clamp(CurrentHP / MaxHP, 0.0f, 1.0f));
 }
