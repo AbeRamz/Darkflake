@@ -585,6 +585,14 @@ void ACombatCharacter::BeginPlay()
 	WalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
 	GetWorldTimerManager().SetTimer(ColdTimer, this, &ACombatCharacter::ApplyColdTick, ColdDamageInterval, true);
+
+	// configurar el post process de frío (empieza apagado)
+	FPostProcessSettings& PP = FollowCamera->PostProcessSettings;
+	PP.bOverride_SceneColorTint = true;
+	PP.SceneColorTint = ColdTint;
+	PP.bOverride_VignetteIntensity = true;
+	PP.VignetteIntensity = 1.0f;
+	FollowCamera->PostProcessBlendWeight = 0.0f;
 }
 
 void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -727,6 +735,13 @@ void ACombatCharacter::Tick(float DeltaTime)
 			SprintCompleted();
 		}
 	}
+
+	// efecto visual de frío
+	const bool bColdActive = bColdEnabled && !bColdProtected && CurrentHP > 0.0f;
+	ColdVisualCurrent = FMath::FInterpTo(ColdVisualCurrent, bColdActive ? 1.0f : 0.0f, DeltaTime, ColdVisualBlendSpeed);
+	ColdPulse = FMath::FInterpTo(ColdPulse, 0.0f, DeltaTime, 3.0f);
+
+	FollowCamera->PostProcessBlendWeight = ColdVisualCurrent * FMath::Clamp(ColdVisualIntensity + ColdPulse * 0.3f, 0.0f, 1.0f);
 }
 
 //New Montage
@@ -786,6 +801,7 @@ void ACombatCharacter::ApplyColdTick()
 	}
 
 	CurrentHP -= ColdDamage;
+	ColdPulse = 1.0f;   // pulso visual con cada tick
 
 	if (CurrentHP <= 0.0f)
 	{

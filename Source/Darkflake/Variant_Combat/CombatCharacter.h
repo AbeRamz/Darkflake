@@ -320,6 +320,21 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Cold")
 	bool bColdProtected = false;
 
+	/** Intensidad base del efecto visual de frío (0 a 1) */
+	UPROPERTY(EditAnywhere, Category = "Cold|Visual", meta = (ClampMin = 0, ClampMax = 1))
+	float ColdVisualIntensity = 0.5f;
+
+	/** Color del tinte de pantalla */
+	UPROPERTY(EditAnywhere, Category = "Cold|Visual")
+	FLinearColor ColdTint = FLinearColor(0.7f, 0.85f, 1.0f);
+
+	/** Qué tan rápido aparece y desaparece el efecto */
+	UPROPERTY(EditAnywhere, Category = "Cold|Visual", meta = (ClampMin = 0.1))
+	float ColdVisualBlendSpeed = 1.5f;
+
+	float ColdVisualCurrent = 0.0f;
+	float ColdPulse = 0.0f;
+
 	FTimerHandle ColdTimer;
 
 	void ApplyColdTick();
