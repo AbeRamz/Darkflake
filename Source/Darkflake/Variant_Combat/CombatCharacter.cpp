@@ -122,6 +122,8 @@ void ACombatCharacter::DoLook(float Yaw, float Pitch)
 
 void ACombatCharacter::DoComboAttackStart()
 {
+	if (bIsDrinking) { return; }
+
 	// are we already playing an attack animation?
 	if (bIsAttacking)
 	{
@@ -142,6 +144,8 @@ void ACombatCharacter::DoComboAttackEnd()
 
 void ACombatCharacter::DoChargedAttackStart()
 {
+	if (bIsDrinking) { return; }
+
 	// raise the charging attack flag
 	bIsChargingAttack = true;
 
@@ -496,7 +500,18 @@ void ACombatCharacter::HandleDeath()
 
 void ACombatCharacter::ApplyHealing(float Healing, AActor* Healer)
 {
-	// stub
+	if (CurrentHP <= 0.0f)
+	{
+		return;
+	}
+
+	CurrentHP = FMath::Clamp(CurrentHP + Healing, 0.0f, MaxHP);
+
+	if (LifeBarWidget)
+	{
+		LifeBarWidget->SetLifePercentage(CurrentHP / MaxHP);
+	}
+	OnHealthChanged(CurrentHP / MaxHP);
 }
 
 void ACombatCharacter::NotifyDanger(const FVector& DangerLocation, AActor* DangerSource)
@@ -520,12 +535,14 @@ float ACombatCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dama
 
 	// reduce the current HP
 	CurrentHP -= Damage;
+	CancelHeal();
 
 	// have we run out of HP?
 	if (CurrentHP <= 0.0f)
 	{
 		// die
 		HandleDeath();
+		CancelHeal();
 	}
 	else
 	{
@@ -582,6 +599,8 @@ void ACombatCharacter::BeginPlay()
 	// start with full stamina
 	SetStamina(MaxStamina);
 
+	SetHealCharges(StartingHealCharges);
+
 	WalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
 	GetWorldTimerManager().SetTimer(ColdTimer, this, &ACombatCharacter::ApplyColdTick, ColdDamageInterval, true);
@@ -634,6 +653,12 @@ void ACombatCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Dodge
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ACombatCharacter::DodgePressed);
+
+		// Heal
+		if (HealAction)
+		{
+			EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ACombatCharacter::HealPressed);
+		}
 	}
 }
 
@@ -655,10 +680,7 @@ void ACombatCharacter::DodgePressed()
 
 void ACombatCharacter::DoDodge()
 {
-	if (bIsDodging || bIsAttacking)
-	{
-		return;
-	}
+	if (bIsDodging || bIsAttacking || bIsDrinking)
 
 	if (!TryConsumeStamina(DodgeStaminaCost))
 	{
@@ -772,10 +794,7 @@ void ACombatCharacter::RecoverFromHit()
 //Sprint
 void ACombatCharacter::SprintStarted()
 {
-	if (bIsDodging || CurrentStamina <= 0.0f)
-	{
-		return;
-	}
+	if (bIsDodging || bIsDrinking || CurrentStamina <= 0.0f)
 
 	bIsSprinting = true;
 	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
@@ -809,4 +828,100 @@ void ACombatCharacter::ApplyColdTick()
 	}
 
 	OnHealthChanged(FMath::Clamp(CurrentHP / MaxHP, 0.0f, 1.0f));
+}
+
+//Frascos de vida
+void ACombatCharacter::HealPressed()
+{
+	DoHeal();
+}
+
+void ACombatCharacter::DoHeal()
+{
+	if (bIsDrinking || bIsAttacking || bIsDodging)
+	{
+		return;
+	}
+
+	// sin frascos, muerto o con la vida llena: no se bebe
+	if (HealCharges <= 0 || CurrentHP <= 0.0f || CurrentHP >= MaxHP)
+	{
+		return;
+	}
+
+	SprintCompleted();
+
+	if (HealMontage)
+	{
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			const float MontageLength = AnimInstance->Montage_Play(HealMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
+
+			if (MontageLength > 0.0f)
+			{
+				bIsDrinking = true;
+
+				FOnMontageEnded HealEndDelegate;
+				HealEndDelegate.BindUObject(this, &ACombatCharacter::HealMontageEnded);
+				AnimInstance->Montage_SetEndDelegate(HealEndDelegate, HealMontage);
+				return;
+			}
+		}
+	}
+
+	// sin montaje todavía: cura al instante (útil para probar)
+	FinishHeal();
+}
+
+void ACombatCharacter::HealMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsDrinking = false;
+
+	// si lo interrumpieron (golpe o muerte) no se cura ni se gasta el frasco
+	if (!bInterrupted)
+	{
+		FinishHeal();
+	}
+}
+
+void ACombatCharacter::FinishHeal()
+{
+	SetHealCharges(HealCharges - 1);
+	ApplyHealing(HealAmount, this);
+}
+
+void ACombatCharacter::CancelHeal()
+{
+	if (!bIsDrinking)
+	{
+		return;
+	}
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Stop(0.1f, HealMontage);
+	}
+}
+
+void ACombatCharacter::SetHealCharges(int32 NewValue)
+{
+	HealCharges = FMath::Clamp(NewValue, 0, MaxHealCharges);
+	OnHealChargesChanged(HealCharges, MaxHealCharges);
+}
+
+bool ACombatCharacter::AddHealCharge(int32 Amount)
+{
+	if (HealCharges >= MaxHealCharges)
+	{
+		return false;
+	}
+
+	SetHealCharges(HealCharges + Amount);
+	return true;
+}
+
+void ACombatCharacter::IncreaseMaxHealCharges(int32 Amount)
+{
+	MaxHealCharges += Amount;
+	SetHealCharges(HealCharges + Amount);
 }

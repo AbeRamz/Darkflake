@@ -339,6 +339,41 @@ protected:
 
 	void ApplyColdTick();
 
+	/** Frascos de vida */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* HealAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heal", meta = (ClampMin = 1))
+	int32 MaxHealCharges = 3;
+
+	/** Frascos con los que empieza (y con los que reaparece) */
+	UPROPERTY(EditAnywhere, Category = "Heal", meta = (ClampMin = 0))
+	int32 StartingHealCharges = 2;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heal")
+	int32 HealCharges = 0;
+
+	/** Vida que cura cada frasco (tu MaxHP es 5) */
+	UPROPERTY(EditAnywhere, Category = "Heal", meta = (ClampMin = 0))
+	float HealAmount = 2.0f;
+
+	/** Montaje de beber */
+	UPROPERTY(EditAnywhere, Category = "Heal")
+	UAnimMontage* HealMontage;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Heal")
+	bool bIsDrinking = false;
+
+	void HealPressed();
+	void HealMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void FinishHeal();
+	void CancelHeal();
+	void SetHealCharges(int32 NewValue);
+
+	/** Avisa al HUD que cambió la cantidad de frascos */
+	UFUNCTION(BlueprintImplementableEvent, Category = "HUD")
+	void OnHealChargesChanged(int32 Charges, int32 MaxCharges);
+
 public:
 	
 	/** Constructor */
@@ -408,6 +443,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Cold")
 	void SetColdProtected(bool bProtected) { bColdProtected = bProtected; }
+
+	UFUNCTION(BlueprintCallable, Category = "Heal")
+	virtual void DoHeal();
+
+	/** Sube el máximo de frascos y regala ese frasco (frasco ampliado) */
+	UFUNCTION(BlueprintCallable, Category = "Heal")
+	void IncreaseMaxHealCharges(int32 Amount = 1);
+
+	/** Para el objeto recogible: true si se sumó el frasco, false si ya estaba lleno */
+	UFUNCTION(BlueprintCallable, Category = "Heal")
+	bool AddHealCharge(int32 Amount = 1);
 
 	UFUNCTION(BlueprintCallable, Category = "Melee Attack")
 	void SetComboAttackMontage(UAnimMontage* NewMontage);
