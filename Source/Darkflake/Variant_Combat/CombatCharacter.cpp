@@ -280,6 +280,12 @@ void ACombatCharacter::AttackMontageEnded(UAnimMontage* Montage, bool bInterrupt
 	// reset the attacking flag
 	bIsAttacking = false;
 
+	// si ya murió, no encadenar más ataques
+	if (CurrentHP <= 0.0f)
+	{
+		return;
+	}
+
 	// check if we have a non-stale cached input
 	if (GetWorld()->GetTimeSeconds() - CachedAttackInputTime <= AttackInputCacheTimeTolerance)
 	{
@@ -484,9 +490,32 @@ void ACombatCharacter::HandleDeath()
 {
 	// disable movement while we're dead
 	GetCharacterMovement()->DisableMovement();
+	SprintCompleted();
 
-	// enable full ragdoll physics
-	GetMesh()->SetSimulatePhysics(true);
+	if (DeathMontage)
+	{
+		// quitar el ragdoll parcial que dejó un golpe anterior
+		GetWorld()->GetTimerManager().ClearTimer(HitRecoveryTimer);
+		GetMesh()->SetPhysicsBlendWeight(0.0f);
+
+		// que el cuerpo ya no gire con la cámara ni responda a botones
+		bUseControllerRotationYaw = false;
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			DisableInput(PC);
+		}
+
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->StopAllMontages(0.1f);
+			AnimInstance->Montage_Play(DeathMontage, 1.0f);
+		}
+	}
+	else
+	{
+		// enable full ragdoll physics
+		GetMesh()->SetSimulatePhysics(true);
+	}
 
 	// hide the life bar
 	LifeBar->SetHiddenInGame(true);
@@ -681,6 +710,9 @@ void ACombatCharacter::DodgePressed()
 void ACombatCharacter::DoDodge()
 {
 	if (bIsDodging || bIsAttacking || bIsDrinking)
+	{
+		return;
+	}
 
 	if (!TryConsumeStamina(DodgeStaminaCost))
 	{
@@ -722,7 +754,10 @@ void ACombatCharacter::DodgeMontageEnded(UAnimMontage* Montage, bool bInterrupte
 	bIsInvincible = false;
 
 	// Give rotation control back to the camera now that the dodge is done
-	bUseControllerRotationYaw = true;
+	if (CurrentHP > 0.0f)
+	{
+		bUseControllerRotationYaw = true;
+	}
 
 	GetMesh()->SetRelativeRotation(MeshStartingTransform.Rotator());
 }
@@ -795,6 +830,9 @@ void ACombatCharacter::RecoverFromHit()
 void ACombatCharacter::SprintStarted()
 {
 	if (bIsDodging || bIsDrinking || CurrentStamina <= 0.0f)
+	{
+		return;
+	}
 
 	bIsSprinting = true;
 	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
@@ -802,13 +840,10 @@ void ACombatCharacter::SprintStarted()
 
 void ACombatCharacter::SprintCompleted()
 {
-	if (!bIsSprinting)
-	{
-		return;
-	}
-
 	bIsSprinting = false;
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+	// siempre devolver la velocidad normal, sin depender de la bandera
+	GetCharacterMovement()->MaxWalkSpeed = (WalkSpeed > 0.0f) ? WalkSpeed : 400.0f;
 }
 
 //Daño por Frío

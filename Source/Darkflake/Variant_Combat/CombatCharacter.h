@@ -42,6 +42,10 @@ class ACombatCharacter : public ACharacter, public ICombatAttacker, public IComb
 	/** Life bar widget component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UWidgetComponent* LifeBar;
+
+	/** Montaje de muerte del jugador (si está vacío, se usa el ragdoll) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Death", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DeathMontage;
 	
 protected:
 
@@ -443,6 +447,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Cold")
 	void SetColdProtected(bool bProtected) { bColdProtected = bProtected; }
+
+	UFUNCTION(BlueprintPure, Category = "Damage")
+	bool IsPlayerDead() const { return CurrentHP <= 0.0f; }
 
 	UFUNCTION(BlueprintCallable, Category = "Heal")
 	virtual void DoHeal();
