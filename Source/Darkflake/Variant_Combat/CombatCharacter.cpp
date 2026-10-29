@@ -471,18 +471,19 @@ void ACombatCharacter::ApplyDamage(float Damage, AActor* DamageCauser, const FVe
 	if (ActualDamage > 0.0f)
 	{
 		// apply the knockback impulse
-		GetCharacterMovement()->AddImpulse(DamageImpulse, true);
+		GetCharacterMovement()->AddImpulse(DamageImpulse * KnockbackMultiplier, true);
 
 		// is the character ragdolling?
 		if (GetMesh()->IsSimulatingPhysics())
 		{
 			// apply an impulse to the ragdoll
-			GetMesh()->AddImpulseAtLocation(DamageImpulse * GetMesh()->GetMass(), DamageLocation);
+			GetMesh()->AddImpulseAtLocation(DamageImpulse * KnockbackMultiplier * GetMesh()->GetMass(), DamageLocation);
 		}
 
 		// pass control to BP to play effects, etc.
 		ReceivedDamage(ActualDamage, DamageLocation, DamageImpulse.GetSafeNormal());
 	}
+
 
 }
 

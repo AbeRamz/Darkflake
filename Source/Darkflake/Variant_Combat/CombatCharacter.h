@@ -89,6 +89,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Damage")
 	float CurrentHP = 0.0f;
 
+	/** Multiplicador del retroceso al recibir golpes (1 = normal, 0 = sin retroceso) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+	float KnockbackMultiplier = 1.0f;
+
 	/** Stamina */
 	UPROPERTY(EditAnywhere, Category = "Stamina", meta = (ClampMin = 1))
 	float MaxStamina = 100.0f;
