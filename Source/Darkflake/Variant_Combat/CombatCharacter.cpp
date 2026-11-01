@@ -333,6 +333,15 @@ void ACombatCharacter::DoAttackTrace(FName DamageSourceBone)
 			// check if we've hit a damageable actor
 			ICombatDamageable* Damageable = Cast<ICombatDamageable>(CurrentHit.GetActor());
 
+			if (MeleeFrontDotThreshold > -1.0f)
+			{
+				const FVector ToTarget = (CurrentHit.GetActor()->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+				if (FVector::DotProduct(GetActorForwardVector(), ToTarget) < MeleeFrontDotThreshold)
+				{
+					continue;
+				}
+			}
+
 			if (Damageable)
 			{
 				// knock upwards and away from the impact normal

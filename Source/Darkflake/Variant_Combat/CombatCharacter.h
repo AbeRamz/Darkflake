@@ -183,6 +183,10 @@ protected:
 	/** Index of the current stage of the melee attack combo */
 	int32 ComboCount = 0;
 
+	/** Minimo producto punto con el frente para aplicar daño. -1 = desactivado */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee")
+	float MeleeFrontDotThreshold = -1.0f;
+
 	/** AttackCharged*/
 
 	/** AnimMontage that will play for charged attacks */
