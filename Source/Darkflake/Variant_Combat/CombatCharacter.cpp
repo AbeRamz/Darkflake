@@ -830,6 +830,11 @@ void ACombatCharacter::SetChargedAttackMontage(UAnimMontage* NewMontage)
 
 void ACombatCharacter::RecoverFromHit()
 {
+	if (CurrentHP <= 0.0f)
+	{
+		return;
+	}
+
 	if (CurrentHP > 0.0f)
 	{
 		GetMesh()->SetPhysicsBlendWeight(0.0f);

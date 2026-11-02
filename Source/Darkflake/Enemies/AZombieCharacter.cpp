@@ -14,6 +14,8 @@ void AAZombieCharacter::HandleDeath()
 	}
 	bIsDead = true;
 
+	GetWorldTimerManager().ClearTimer(HitRecoveryTimer);
+
 	// no llamamos a Super: no queremos ragdoll ni el Destroy a los 3 s
 
 	GetCharacterMovement()->DisableMovement();
